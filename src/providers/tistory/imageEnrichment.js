@@ -177,6 +177,8 @@ const uploadInlineDataImages = async (api, content) => {
       // 업로드 실패 → 해당 이미지는 원본(data:)로 남김(기존 동작과 동일)
     }
   }
+  // 이미지가 연속될 때만 사이에 빈 줄 한 줄 삽입(이미지끼리 다닥붙는 것 방지). 이미지→텍스트는 그대로.
+  out = out.replace(/(\/>\s*<\/p>)\s*(<p data-ke-size="size16"><img )/gi, '$1<p data-ke-size="size16">&nbsp;</p>$2');
   return out;
 };
 
