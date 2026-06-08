@@ -157,6 +157,9 @@ const runCommand = async (command, opts = {}) => {
           thumbnail: opts.thumbnail || undefined,
           relatedImageKeywords: parseList(opts.relatedImageKeywords),
           enforceSystemPrompt: opts.enforceSystemPrompt !== false,
+          // 로컬 파일은 imagePath로 명시 전달(insta/threads가 직접 업로드). 옛 버그: imageUrls에만 넣어
+          // insta가 로컬 경로를 new URL()로 파싱 → "Failed to parse URL" 로 실패했음.
+          imagePath: opts.imageFile || undefined,
           imageUrls: [...(opts.imageFile ? [opts.imageFile] : []), ...parseList(opts.imageUrls)],
           imageUploadLimit: parseIntOrNull(opts.imageUploadLimit) || 1,
           minimumImageCount: parseIntOrNull(opts.minimumImageCount) || 1,
