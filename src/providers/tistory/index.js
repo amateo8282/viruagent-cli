@@ -11,7 +11,7 @@ const {
   MAX_IMAGE_UPLOAD_COUNT,
 } = require('./utils');
 const { normalizeThumbnailForPublish } = require('./imageNormalization');
-const { enrichContentWithUploadedImages, resolveMandatoryThumbnail } = require('./imageEnrichment');
+const { enrichContentWithUploadedImages, resolveMandatoryThumbnail, uploadInlineDataImages } = require('./imageEnrichment');
 const { createWithProviderSession, checkAndIncrementRateLimit, getRateLimitStatus } = require('./session');
 const { createAskForAuthentication } = require('./auth');
 
@@ -107,13 +107,18 @@ const createTistoryProvider = ({ sessionPath, account }) => {
         const safeImageUploadLimit = MAX_IMAGE_UPLOAD_COUNT;
         const safeMinimumImageCount = MAX_IMAGE_UPLOAD_COUNT;
 
-        if (autoUploadImages) {
+        // 본문에 인라인된 base64 이미지가 있으면 업로드(autoUploadImages 무관) — blog init 필요.
+        const hasInlineData = /<img\b[^>]*\bsrc=["']data:image\//i.test(rawContent || '');
+        if (autoUploadImages || hasInlineData) {
           await tistoryApi.initBlog();
         }
+        const contentForPublish = hasInlineData
+          ? await uploadInlineDataImages(tistoryApi, rawContent)
+          : rawContent;
 
         const enrichedImages = await enrichContentWithUploadedImages({
           api: tistoryApi,
-          rawContent,
+          rawContent: contentForPublish,
           autoUploadImages,
           relatedImageKeywords,
           imageUrls,

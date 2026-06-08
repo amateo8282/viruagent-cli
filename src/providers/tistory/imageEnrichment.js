@@ -157,6 +157,29 @@ const uploadImageFromRemote = async (api, remoteUrl, fallbackName = 'image', dep
   };
 };
 
+// 본문에 인라인된 base64(data:) 이미지를 티스토리 이미지서버에 업로드하고 작은 URL로 치환한다.
+// 에디터가 data: 이미지를 본문째 보내면(수~수십 MB) 티스토리가 요청 과대로 500("일시적인 문제")을
+// 낸다 → autoUploadImages(스톡 자동추가)와 무관하게 항상 선처리. 실패한 이미지는 원본 유지.
+const uploadInlineDataImages = async (api, content) => {
+  const rawContent = content || '';
+  const re = /<img\b[^>]*?\bsrc=["'](data:image\/[a-z0-9.+-]+;base64,[^"']+)["'][^>]*>/gi;
+  const matches = [...rawContent.matchAll(re)];
+  if (!matches.length) return rawContent;
+  let out = rawContent;
+  for (let i = 0; i < matches.length; i++) {
+    const full = matches[i][0];
+    const dataUrl = matches[i][1];
+    try {
+      const uploaded = await uploadImageFromRemote(api, dataUrl, `inline-${i + 1}`);
+      const url = uploaded && uploaded.uploadedUrl;
+      if (url) out = out.replace(full, `<p data-ke-size="size16"><img src="${url}" alt="" /></p>`);
+    } catch (_e) {
+      // 업로드 실패 → 해당 이미지는 원본(data:)로 남김(기존 동작과 동일)
+    }
+  }
+  return out;
+};
+
 const replaceImagePlaceholdersWithUploaded = async (
   api,
   content,
@@ -568,6 +591,7 @@ module.exports = {
   extractImagePlaceholders,
   fetchImageBuffer,
   uploadImageFromRemote,
+  uploadInlineDataImages,
   replaceImagePlaceholdersWithUploaded,
   enrichContentWithUploadedImages,
   resolveMandatoryThumbnail,
